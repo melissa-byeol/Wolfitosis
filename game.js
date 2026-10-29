@@ -8,6 +8,12 @@ const gameState = {
     clickTarget: null
 };
 
+// Limites de entidades y coste de construccion (evita crecimiento infinito)
+const MAX_LOBITOS = 50;
+const MAX_TREES = 15;
+const MAX_BEDS = 10;
+const BED_COST = 3; // maderas necesarias para construir una cama
+
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -141,8 +147,13 @@ class Tree {
     }
     
     handleClick(x, y) {
-        const distance = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
-        if (distance <= this.radius) {
+        // Hitbox corregida: la copa es un circulo Y el tronco es un rectangulo.
+        // Antes solo se contaba la copa circular, por lo que clics visibles
+        // en el tronco no hacian nada.
+        const inCanopy = Math.sqrt((x - this.x) ** 2 + ((y - (this.y - 10)) ** 2)) <= this.radius;
+        const inTrunk = (x >= this.x - 5 && x <= this.x + 5 &&
+                         y >= this.y && y <= this.y + 30);
+        if (inCanopy || inTrunk) {
             this.clicks++;
             if (this.clicks >= this.maxClicks) {
                 return true; // Tree destroyed
@@ -205,6 +216,7 @@ document.getElementById('flask').addEventListener('click', function() {
 });
 
 function spawnLobito() {
+    if (gameState.lobitos.length >= MAX_LOBITOS) return; // limite de entidades
     const x = Math.random() * (canvas.width - 100) + 50;
     const y = Math.random() * (canvas.height - 100) + 50;
     const lobito = new Lobito(x, y);
@@ -214,6 +226,7 @@ function spawnLobito() {
 
 // Tree spawning
 function spawnTree() {
+    if (gameState.trees.length >= MAX_TREES) return; // limite de entidades
     const x = Math.random() * (canvas.width - 100) + 50;
     const y = Math.random() * (canvas.height - 100) + 50;
     const tree = new Tree(x, y);
@@ -225,69 +238,69 @@ for (let i = 0; i < 5; i++) {
     spawnTree();
 }
 
-// Spawn trees periodically
-setInterval(spawnTree, 10000); // New tree every 10 seconds
+// Spawn trees periodically (solo mientras haya lobitos, para no acumular madera infinita)
+setInterval(() => {
+    if (gameState.lobitos.length > 0) spawnTree();
+}, 10000); // New tree every 10 seconds
 
-// Canvas click handler
+// Canvas click handler (logica tipo RTS: seleccionar / mover / deseleccionar)
 canvas.addEventListener('click', function(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    // Check tree clicks first
+
+    // 1) Check tree clicks first
     for (let i = gameState.trees.length - 1; i >= 0; i--) {
         const tree = gameState.trees[i];
         if (tree.handleClick(x, y)) {
             gameState.trees.splice(i, 1);
             gameState.wood += 3;
-            craftBed();
-            updateUI();
+            updateUI(); // ya NO construye una cama automatica: el jugador decide
             return;
         }
     }
-    
-    // Set movement target for selected lobitos
+
+    // 2) Clic sobre un lobito -> seleccionarlo (antes solo se podia con Ctrl/Shift)
+    let clickedLobito = null;
+    for (const lobito of gameState.lobitos) {
+        const d = Math.sqrt((lobito.x - x) ** 2 + (lobito.y - y) ** 2);
+        if (d <= lobito.radius + 5) { clickedLobito = lobito; break; }
+    }
+
+    if (clickedLobito) {
+        if (e.ctrlKey || e.shiftKey) {
+            // Seleccion multiple: alternar sin limpiar las demas
+            const index = gameState.selectedLobitos.indexOf(clickedLobito);
+            if (index > -1) {
+                gameState.selectedLobitos.splice(index, 1);
+            } else {
+                gameState.selectedLobitos.push(clickedLobito);
+            }
+        } else {
+            // Clic simple: reemplaza la seleccion
+            gameState.selectedLobitos = [clickedLobito];
+        }
+        return;
+    }
+
+    // 3) Clic en zona vacia: orden de movimiento a los seleccionados.
+    //    Si no hay seleccionados, DESELECCIONA (movia a todos por error).
     if (gameState.selectedLobitos.length > 0) {
         gameState.selectedLobitos.forEach(lobito => {
             lobito.targetX = x;
             lobito.targetY = y;
         });
     } else {
-        // If no selection, move all lobitos
-        gameState.lobitos.forEach(lobito => {
-            lobito.targetX = x;
-            lobito.targetY = y;
-        });
+        gameState.selectedLobitos = []; // limpieza de referencias obsoletas
     }
 });
 
-// Selection handler (Ctrl+Click or Shift+Click for multiple)
-canvas.addEventListener('mousedown', function(e) {
-    if (e.ctrlKey || e.shiftKey) {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        gameState.lobitos.forEach(lobito => {
-            const distance = Math.sqrt(
-                (lobito.x - x) ** 2 + 
-                (lobito.y - y) ** 2
-            );
-            if (distance <= lobito.radius + 5) {
-                const index = gameState.selectedLobitos.indexOf(lobito);
-                if (index > -1) {
-                    gameState.selectedLobitos.splice(index, 1);
-                } else {
-                    gameState.selectedLobitos.push(lobito);
-                }
-            }
-        });
-    }
-});
+// Construccion MANUAL de camas (el jugador decide cuando y gasta 3 maderas)
+document.getElementById('bed-btn').addEventListener('click', craftBed);
 
 function craftBed() {
-    if (gameState.wood >= 1) {
-        gameState.wood -= 1;
+    if (gameState.wood >= BED_COST && gameState.beds.length < MAX_BEDS) {
+        gameState.wood -= BED_COST;
         const x = Math.random() * (canvas.width - 100) + 50;
         const y = Math.random() * (canvas.height - 100) + 50;
         const bed = new Bed(x, y);
@@ -300,6 +313,10 @@ function updateUI() {
     document.getElementById('lobito-count').textContent = gameState.lobitos.length;
     document.getElementById('wood-count').textContent = gameState.wood;
     document.getElementById('bed-count').textContent = gameState.beds.length;
+
+    // Habilitar/deshabilitar el boton de cama segun recursos y limite
+    const bedBtn = document.getElementById('bed-btn');
+    bedBtn.disabled = !(gameState.wood >= BED_COST && gameState.beds.length < MAX_BEDS);
 }
 
 // Game loop

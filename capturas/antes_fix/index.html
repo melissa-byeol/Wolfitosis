@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Wolfitosis</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- UI Overlay -->
+        <div id="ui-layer">
+            <div id="flask-container">
+                <div id="flask" class="flask">
+                    <div class="flask-liquid"></div>
+                </div>
+                <p>Clic para generar Lobito</p>
+            </div>
+            
+            <div id="stats">
+                <p>Lobitos: <span id="lobito-count">0</span></p>
+                <p>Madera: <span id="wood-count">0</span></p>
+                <p>Camas: <span id="bed-count">0</span></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
