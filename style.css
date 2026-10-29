@@ -1,0 +1,100 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #2d5016;
+    touch-action: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(135deg, #4a7c2e 0%, #2d5016 100%);
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#flask-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    text-align: center;
+    pointer-events: auto;
+}
+
+.flask {
+    width: 80px;
+    height: 100px;
+    border: 3px solid #000;
+    border-radius: 10px 10px 30px 30px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.flask:hover {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.flask-liquid {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    height: 60%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 0 0 25px 25px;
+    animation: liquidWave 2s ease-in-out infinite;
+}
+
+@keyframes liquidWave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+.flask:active {
+    transform: scale(0.95);
+}
+
+#flask-container p {
+    color: white;
+    margin-top: 10px;
+    font-size: 14px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#stats {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    font-size: 16px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+#stats p {
+    margin: 5px 0;
+}
